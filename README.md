@@ -29,7 +29,7 @@ Other memory systems try to fix this by letting AI decide what's worth rememberi
 
 <br>
 
-[Quick Start](#quick-start) · [The Palace](#the-palace) · [AAAK Dialect](#aaak-dialect-experimental) · [Benchmarks](#benchmarks) · [MCP Tools](#mcp-server)
+[Quick Start](#quick-start) · [The Palace](#the-palace) · [AAAK Dialect](#aaak-compression) · [Benchmarks](#benchmarks) · [MCP Tools](#mcp-server)
 
 <br>
 
@@ -84,18 +84,6 @@ Other memory systems try to fix this by letting AI decide what's worth rememberi
 
 ---
 
-## An important follow up note regarding fake MemPalace websites - April 11, 2026
-
-Several Community Members (#267, #326, #506) have pointed out there are fake MemPalace websites popping up, including ones with Malware.
-
-To be super clear, MemPalace *has no website* (at least for now), so anything claiming to be one is false.
-
-Thanks to our Community Members for letting us know about the problem.
-
-Stay safe out there.
-
----
-
 ## Quick Start
 
 ```bash
@@ -124,21 +112,19 @@ Three mining modes: **projects** (code and docs), **convos** (conversation expor
 
 After the one-time setup (install → init → mine), you don't run MemPalace commands manually. Your AI uses it for you. There are two ways, depending on which AI you use.
 
-### With Claude Code (recommended)
-
-Native marketplace install:
+### With Claude Code (plugin — recommended)
 
 ```bash
-claude plugin marketplace add milla-jovovich/mempalace
-claude plugin install --scope user mempalace
+# Install the MemPalace plugin (hooks + MCP server in one step)
+claude plugin add mempalace@mempalace --marketplace github:milla-jovovich/mempalace
 ```
 
-Restart Claude Code, then type `/skills` to verify "mempalace" appears.
+This installs the MCP server (19 tools) and auto-save hooks (save every 15 messages + emergency save before compaction). No manual configuration needed.
 
-### With Claude, ChatGPT, Cursor, Gemini (MCP-compatible tools)
+### With Claude, ChatGPT, Cursor, Gemini (MCP — manual)
 
 ```bash
-# Connect MemPalace once
+# Or connect the MCP server directly
 claude mcp add mempalace -- python -m mempalace.mcp_server
 ```
 
@@ -218,33 +204,33 @@ There are also **halls**, which connect rooms within a wing, and **tunnels**, wh
 You say what you're looking for and boom, it already knows which wing to go to. Just *that* in itself would have made a big difference. But this is beautiful, elegant, organic, and most importantly, efficient.
 
 ```
-  +------------------------------------------------------------+
-  ¦  WING: Person                                              ¦
-  ¦                                                            ¦
-  ¦    +----------+            +----------+                    ¦
-  ¦    ¦  Room A  ¦  --hall--  ¦  Room B  ¦                    ¦
-  ¦    +----------+            +----------+                    ¦
-  ¦         ¦                                                  ¦
-  ¦         v                                                  ¦
-  ¦    +----------+      +----------+                          ¦
-  ¦    ¦  Closet  ¦ ---> ¦  Drawer  ¦                          ¦
-  ¦    +----------+      +----------+                          ¦
-  +---------+--------------------------------------------------+
-            ¦
+  ┌─────────────────────────────────────────────────────────────┐
+  │  WING: Person                                              │
+  │                                                            │
+  │    ┌──────────┐  ──hall──  ┌──────────┐                    │
+  │    │  Room A  │            │  Room B  │                    │
+  │    └────┬─────┘            └──────────┘                    │
+  │         │                                                  │
+  │         ▼                                                  │
+  │    ┌──────────┐      ┌──────────┐                          │
+  │    │  Closet  │ ───▶ │  Drawer  │                          │
+  │    └──────────┘      └──────────┘                          │
+  └─────────┼──────────────────────────────────────────────────┘
+            │
           tunnel
-            ¦
-  +---------+--------------------------------------------------+
-  ¦  WING: Project                                             ¦
-  ¦         ¦                                                  ¦
-  ¦    +----------+            +----------+                    ¦
-  ¦    ¦  Room A  ¦  --hall--  ¦  Room C  ¦                    ¦
-  ¦    +----------+            +----------+                    ¦
-  ¦         ¦                                                  ¦
-  ¦         v                                                  ¦
-  ¦    +----------+      +----------+                          ¦
-  ¦    ¦  Closet  ¦ ---> ¦  Drawer  ¦                          ¦
-  ¦    +----------+      +----------+                          ¦
-  +------------------------------------------------------------+
+            │
+  ┌─────────┼──────────────────────────────────────────────────┐
+  │  WING: Project                                             │
+  │         │                                                  │
+  │    ┌────┴─────┐  ──hall──  ┌──────────┐                    │
+  │    │  Room A  │            │  Room C  │                    │
+  │    └────┬─────┘            └──────────┘                    │
+  │         │                                                  │
+  │         ▼                                                  │
+  │    ┌──────────┐      ┌──────────┐                          │
+  │    │  Closet  │ ───▶ │  Drawer  │                          │
+  │    └──────────┘      └──────────┘                          │
+  └─────────────────────────────────────────────────────────────┘
 ```
 
 **Wings** — a person or project. As many as you need.
@@ -461,12 +447,13 @@ Letta charges $20–200/mo for agent-managed memory. MemPalace does it with a wi
 
 ## MCP Server
 
+**Plugin install (recommended):**
 ```bash
-# Via plugin (recommended)
-claude plugin marketplace add milla-jovovich/mempalace
-claude plugin install --scope user mempalace
+claude plugin add mempalace@mempalace --marketplace github:milla-jovovich/mempalace
+```
 
-# Or manually
+**Manual install:**
+```bash
 claude mcp add mempalace -- python -m mempalace.mcp_server
 ```
 
@@ -528,16 +515,13 @@ Two hooks for Claude Code that automatically save memories during work:
 
 **PreCompact Hook** — fires before context compression. Emergency save before the window shrinks.
 
-```json
-{
-  "hooks": {
-    "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "/path/to/mempalace/hooks/mempal_save_hook.sh"}]}],
-    "PreCompact": [{"matcher": "", "hooks": [{"type": "command", "command": "/path/to/mempalace/hooks/mempal_precompact_hook.sh"}]}]
-  }
-}
+**Plugin install (recommended):** Both hooks are included in the plugin — no manual configuration needed:
+
+```bash
+claude plugin add mempalace@mempalace --marketplace github:milla-jovovich/mempalace
 ```
 
-**Optional auto-ingest:** Set the `MEMPAL_DIR` environment variable to a directory path and the hooks will automatically run `mempalace mine` on that directory during each save trigger (background on stop, synchronous on precompact).
+**Manual install:** See [hooks/README.md](hooks/README.md) for copy-paste configuration.
 
 ---
 
@@ -597,9 +581,6 @@ mempalace compress --wing myapp                   # AAAK compress
 
 # Status
 mempalace status                                  # palace overview
-
-# MCP
-mempalace mcp                                     # show MCP setup command
 ```
 
 All commands accept `--palace <path>` to override the default location.
@@ -722,7 +703,7 @@ PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines.
 MIT — see [LICENSE](LICENSE).
 
 <!-- Link Definitions -->
-[version-shield]: https://img.shields.io/badge/version-3.2.0-4dc9f6?style=flat-square&labelColor=0a0e14
+[version-shield]: https://img.shields.io/badge/version-3.0.0-4dc9f6?style=flat-square&labelColor=0a0e14
 [release-link]: https://github.com/milla-jovovich/mempalace/releases
 [python-shield]: https://img.shields.io/badge/python-3.9+-7dd8f8?style=flat-square&labelColor=0a0e14&logo=python&logoColor=7dd8f8
 [python-link]: https://www.python.org/
